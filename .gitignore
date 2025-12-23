@@ -1,0 +1,10 @@
+# Arduino build output
+*.elf
+*.hex
+*.bin
+
+# Windows junk
+Thumbs.db
+
+# Arduino temp
+.build/
