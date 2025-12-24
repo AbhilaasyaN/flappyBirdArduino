@@ -2,39 +2,70 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 
-// ---- OLED config ----
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
-#define OLED_ADDR 0x3C   // most common; change to 0x3D if needed
+#define OLED_ADDR 0x3C
 
-// ---- Button config ----
-#define BUTTON_PIN 2     // your wiring: D2
-// With INPUT_PULLUP: HIGH = released, LOW = pressed
+#define BUTTON_PIN 2
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 
-// ---- Button state + debounce ----
-bool stableState = HIGH;           // debounced, trusted button state
-bool lastReading = HIGH;           // last raw read
-unsigned long lastChangeMs = 0;    // when the raw read last changed
+// --------- Debounce variables (same idea as before) ----------
+bool stableState = HIGH;
+bool lastReading = HIGH;
+unsigned long lastChangeMs = 0;
 const unsigned long debounceMs = 25;
 
-int pressCount = 0;
+// --------- Game timing ----------
+unsigned long lastUpdateMs = 0;
+const unsigned long dtMs = 20;   // 20 ms = 50 updates per second
+
+// --------- Bird physics ----------
+float birdY = 20;               // vertical position (pixels)
+float birdV = 0;                // vertical velocity (pixels per update)
+const float gravity = 0.35;      // acceleration downward
+const float flapImpulse = -5.5;  // upward kick (negative = up)
+
+// Bird drawing
+const int birdX = 25;
+const int birdW = 6;
+const int birdH = 6;
 
 void render() {
   display.clearDisplay();
-  display.setTextColor(SSD1306_WHITE);
 
-  display.setTextSize(2);
-  display.setCursor(0, 0);
-  display.println(stableState == LOW ? "FLAP!" : "READY");
+  // Draw bird as a filled rectangle
+  display.fillRect(birdX, (int)birdY, birdW, birdH, SSD1306_WHITE);
 
-  display.setTextSize(1);
-  display.setCursor(0, 40);
-  display.print("Presses: ");
-  display.println(pressCount);
+  // Optional: draw ground line
+  display.drawLine(0, SCREEN_HEIGHT - 1, SCREEN_WIDTH - 1, SCREEN_HEIGHT - 1, SSD1306_WHITE);
 
   display.display();
+}
+
+// Returns true only when a NEW press event happens (HIGH->LOW), debounced
+bool buttonPressedEvent() {
+  bool event = false;
+
+  bool reading = digitalRead(BUTTON_PIN);
+
+  if (reading != lastReading) {
+    lastChangeMs = millis();
+    lastReading = reading;
+  }
+
+  if ((millis() - lastChangeMs) > debounceMs) {
+    if (stableState != reading) {
+      stableState = reading;
+
+      // Press event happens when stableState becomes LOW
+      if (stableState == LOW) {
+        event = true;
+      }
+    }
+  }
+
+  return event;
 }
 
 void setup() {
@@ -42,35 +73,41 @@ void setup() {
 
   Wire.begin();
   if (!display.begin(SSD1306_SWITCHCAPVCC, OLED_ADDR)) {
-    while (true); // stop if OLED init fails
+    while (true);
   }
 
-  render(); // initial screen
+  lastUpdateMs = millis();
+  render();
 }
 
 void loop() {
-  // 1) Read the raw (possibly bouncy) input
-  bool reading = digitalRead(BUTTON_PIN);
-
-  // 2) If raw reading changed, reset debounce timer
-  if (reading != lastReading) {
-    lastChangeMs = millis();
-    lastReading = reading;
+  // Handle flap input (event-based)
+  if (buttonPressedEvent()) {
+    birdV = flapImpulse;  // reset velocity upward
   }
 
-  // 3) If the reading has been stable for long enough, accept it
-  if ((millis() - lastChangeMs) > debounceMs) {
-    // If debounced state changes, we have a real event
-    if (stableState != reading) {
-      stableState = reading;
+  // Fixed timestep update
+  unsigned long now = millis();
+  if (now - lastUpdateMs >= dtMs) {
+    lastUpdateMs += dtMs;
 
-      // Count only on a PRESS event (HIGH -> LOW)
-      if (stableState == LOW) {
-        pressCount++;
-      }
+    // Physics update
+    birdV += gravity;
+    birdY += birdV;
 
-      // Update OLED whenever the stable state changes
-      render();
+    // Clamp to screen bounds
+    if (birdY < 0) {
+      birdY = 0;
+      birdV = 0;
     }
+    if (birdY > SCREEN_HEIGHT - birdH) {
+      birdY = SCREEN_HEIGHT - birdH;
+      birdV = 0;
+    }
+
+    // Draw frame
+    render();
   }
 }
+
+
