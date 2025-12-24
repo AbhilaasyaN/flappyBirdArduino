@@ -137,13 +137,8 @@ void renderFrame() {
 
   // If crashed, overlay message
   if (crashed) {
-    display.setTextSize(2);
-    display.setCursor(10, 24);
-    display.print("CRASH");
-
-    display.setTextSize(1);
-    display.setCursor(8, 50);
-    display.print("Press to reset");
+    renderGameOverScreen();
+    return;
   }
 
   display.display();
@@ -157,6 +152,25 @@ void resetGame() {
   crashed = false;
   resetPipe();
   renderFrame();
+}
+
+void renderGameOverScreen() {
+  display.clearDisplay();
+  display.setTextColor(SSD1306_WHITE);
+
+  display.setTextSize(2);
+  display.setCursor(10, 10);
+  display.println("GAME OVER");
+
+  display.setTextSize(1);
+  display.setCursor(0, 36);
+  display.print("Score: ");
+  display.println(score);
+
+  display.setCursor(0, 52);
+  display.println("Press to reset");
+
+  display.display();
 }
 
 // -------------------- Setup --------------------
@@ -255,6 +269,7 @@ void loop() {
 
     if (hitTop || hitBot) {
       crashed = true;
+      renderGameOverScreen();
     }
 
     // ---------------- Draw the frame ----------------
