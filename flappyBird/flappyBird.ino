@@ -183,6 +183,10 @@ void loop() {
   if (buttonPressedEvent()) {
     if (!crashed) {
       birdV = flapImpulse;
+      if (birdV <-3.0)
+      {
+        birdV = -3.0;
+      }
     } else {
       resetGame();
     }
