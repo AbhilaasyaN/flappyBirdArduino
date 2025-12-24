@@ -7,7 +7,7 @@
 // resolution/size of the oled display
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
-#define Button_PIN 2 // the button we use is digital pin 2
+#define BUTTON_PIN 2 // the button we use is digital pin 2
 // &Wire means that we use the I2C, and the -1 means that the game is not including a reset pin, it might just start over again by itself
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -51,19 +51,34 @@ void setup() {
     while(true);
   }
 
-  display.clearDisplay();
-
-  //Drawing the text
-  display.setTextSize(2);
-  display.setTextColor(SSD1306_WHITE);
-  display.setCursor(10,20);
-  display.println("HELLO");
-
-  display.display(); // push buffer to screen
-
+  drawScreen(false);
 }
+
+//   display.clearDisplay();
+
+//   //Drawing the text
+//   display.setTextSize(2);
+//   display.setTextColor(SSD1306_WHITE);
+//   display.setCursor(10,20);
+//   display.println("HELLO");
+
+//   display.display(); // push buffer to screen
+
+// }
 
 void loop() {
   // put your main code here, to run repeatedly:
+  // reads the current button state
+  bool currentState = digitalRead(BUTTON_PIN);
+  if(buttonState == HIGH && currentState == LOW)
+  {
+    pressCount++;
+    drawScreen(true);
+  }
+  if(buttonState == LOW && currentState == HIGH)
+  {
+    drawScreen(false); // sets it back to ready position
+  }
 
+  buttonState = currentState;
 }
